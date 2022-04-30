@@ -5,6 +5,12 @@ This is a trivial tool for converting text in Gemini format to LaTeX. It assumes
 
 The tool simply reads Gemini text on stdin and emits a reasonable LaTeX document, which in turn can produce a reasonable PDF via `pdflatex`.
 
+Usage
+-----
+
+    $ ./gemtext2latex.py < example.gemini > example.tex
+    $ pdflatex example.tex
+
 To do
 -----
 
