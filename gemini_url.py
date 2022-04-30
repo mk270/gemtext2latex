@@ -1,5 +1,14 @@
 
-# Join URLs that use "gemini://" rather than "http://"
+# gemtext2latex, A Gemini to LaTeX text converter, by Martin Keegan
+#
+# To the extent (if any) permissible by law, Copyright (C) 2022  Martin Keegan
+#
+# This programme is free software; you may redistribute and/or modify it under
+# the terms of the Apache Software Licence v2.0.
+
+
+# This module:
+#   join URLs that use "gemini://" rather than "http://"
 
 # There are some tools in the standard Python libraries for joining URLs and
 # dealing with relative URLs and so on, but on a brief investigation they

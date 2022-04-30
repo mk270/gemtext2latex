@@ -10,3 +10,9 @@ To do
 
 * provide docs
 * tidy up the code
+
+Licence
+-------
+
+To the extent that such a small piece of code is subject to copyright, I am
+happy to make it available under the Apache Software Licence, v2.0.
