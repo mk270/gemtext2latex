@@ -8,7 +8,5 @@ The tool simply reads Gemini text on stdin and emits a reasonable LaTeX document
 To do
 -----
 
-* remove dependence on `mk-plain`
 * provide docs
 * tidy up the code
-* sort out relative URLs / base URLs
