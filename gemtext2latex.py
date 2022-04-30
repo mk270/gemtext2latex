@@ -11,6 +11,7 @@ import logging
 import argparse
 import sys
 import re
+import gemini_url
 
 DOC_CLASS='mk-plain'
 
@@ -65,13 +66,13 @@ class Preformatted(Section):
 
 
 class Link(Section):
-    def __init__(self, line):
+    def __init__(self, line, base_url):
         relevant = line[3:]
         parts = relevant.split(" ", 1)
         self.caption = None
         if len(parts) > 1:
             self.caption = parts[1]
-        self.referent = parts[0]
+        self.referent = gemini_url.gemini_urljoin(base_url, parts[0])
 
     def __repr__(self):
         if self.caption is not None:
@@ -125,7 +126,7 @@ class List(Section):
         return f"{top}{items}{tail}"
 
 
-def sections(input_stream):
+def sections(args, input_stream):
     """Get the various sections of the text:
        links, paragraphs, headings, preformatted.
     """
@@ -155,7 +156,7 @@ def sections(input_stream):
                 yield Heading(line)
 
             elif line.startswith("=> "):
-                yield Link(line)
+                yield Link(line, args.base)
 
             elif line.startswith("* "):
                 yield Item(line)
@@ -201,7 +202,7 @@ def sections(input_stream):
 def main(args, input_stream):
     print("\\documentclass{%s}" % args.docclass)
     print(f"{args.top}")
-    for sect in sections(input_stream):
+    for sect in sections(args, input_stream):
         print(f"{sect}")
     print(f"{args.tail}")
 
@@ -234,6 +235,11 @@ def run():
         '--filename',
         default=None,
         help="input file"
+    )
+    parser.add_argument(
+        '--base',
+        default=None,
+        help=" base for use with relative URLs"
     )
     args = parser.parse_args()
     if args.debug:
