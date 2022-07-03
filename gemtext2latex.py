@@ -23,17 +23,37 @@ DOC_TAIL = '''
 \\end{document}
 '''
 
-def latex_quote(s):
-    return re.sub(r'([%$}{_#&])',
-                  (lambda x: "\\" + x.groups(0)[0]),
-                  s)
+# TODO deal with underscores being naively quoted
+def italicise(delim, line):
+    if delim is None:
+        return line
+
+    occurrences = line.count(delim)
+    balanced = occurrences % 2 == 0
+    if not balanced:
+        return line
+
+    quote = {
+        "*": "\*",
+    }
+    quoted_delim = quote.get(delim, delim)
+    pattern = re.compile(quoted_delim + "([a-zA-Z0-9, '-]*?)" + quoted_delim)
+    result = re.sub(pattern, "\\\\textit\x7b\\1\x7d", line)
+    return result
+
+def latex_quote(s, italics_char):
+    naive_quoted = re.sub(r'([%$}{_#&])',
+                          (lambda x: "\\" + x.groups(0)[0]),
+                          s)
+    return italicise(italics_char, naive_quoted)
+
 
 class Section:
     def __init__(self, line):
         self.line = line
 
     def __repr__(self):
-        s = latex_quote(self.line)
+        s = latex_quote(self.line, None)
         c = __class__.__name__
         return f"{c}: {s}\n"
 
@@ -47,7 +67,7 @@ class Heading(Section):
     def __repr__(self):
         level = "sub" * (self.level - 1)
         cmd = f"\x5c{level}section*"
-        s = latex_quote(self.line)
+        s = latex_quote(self.line, None)
         return f"{cmd}\x7b{s}\x7d\n"
 
 
@@ -98,16 +118,21 @@ class Links(Section):
 
 
 class Item(Section):
-    def __init__(self, line):
+    def __init__(self, line, italics_char):
         self.line = line[2:]
-    
+        self.italics_char = italics_char
+
     def __repr__(self):
-        return latex_quote(self.line)
+        return latex_quote(self.line, self.italics_char)
 
 
 class Paragraph(Section):
+    def __init__(self, line, italics_char):
+        self.line = line
+        self.italics_char = italics_char
+
     def __repr__(self):
-        s = latex_quote(self.line)
+        s = latex_quote(self.line, self.italics_char)
         return f"{s}\n"
 
 
@@ -159,10 +184,10 @@ def sections(args, input_stream):
                 yield Link(line, args.base)
 
             elif line.startswith("* "):
-                yield Item(line)
+                yield Item(line, args.italics_char)
 
             else:
-                yield Paragraph(line)
+                yield Paragraph(line, args.italics_char)
 
     def group_fragments(source, member_class, group_class):
         current = None
@@ -221,6 +246,12 @@ def run():
               "Must include the \\begin{document} line.")
     )
     parser.add_argument(
+        '--italics-char',
+        default=None,
+        type=str,
+        help=("set the delimiter for italics")
+    )
+    parser.add_argument(
         '--tail',
         default=DOC_TAIL,
         help=("set the endmatter after the content. " +
@@ -244,6 +275,9 @@ def run():
     args = parser.parse_args()
     if args.debug:
         logging.getLogger().setLevel(20)
+
+    if args.italics_char is not None:
+        assert len(args.italics_char) == 1
 
     if args.filename:
         with open(args.filename) as f:
