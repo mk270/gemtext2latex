@@ -97,7 +97,7 @@ class Link(Section):
     def __repr__(self):
         if self.caption is not None:
             return "\\href{%s}{%s}" % (self.referent, self.caption)
-        return "\\href{%s}" % self.referent
+        return "\\url{%s}" % self.referent
 
 
 # yes, I am well aware this should be factored together with
