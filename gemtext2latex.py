@@ -12,6 +12,8 @@ import argparse
 import sys
 import re
 import gemini_url
+from typing import (Optional, Generator, Callable, TypeVar, Type, TextIO,
+                    List, Any)
 
 DOC_CLASS='mk-plain'
 
@@ -24,7 +26,7 @@ DOC_TAIL = '''
 '''
 
 # TODO deal with underscores being naively quoted
-def italicise(delim, line):
+def italicise(delim: Optional[str], line: str) -> str:
     if delim is None:
         return line
 
@@ -41,30 +43,30 @@ def italicise(delim, line):
     result = re.sub(pattern, "\\\\textit\x7b\\1\x7d", line)
     return result
 
-def latex_quote(s, italics_char):
-    naive_quoted = re.sub(r'([%$}{_#&])',
-                          (lambda x: "\\" + x.groups(0)[0]),
-                          s)
+def latex_quote(s: str, italics_char: Optional[str]) -> str:
+    pattern = r'([%$}{_#&])' # characters that latex wants to quote
+    replacer = lambda x: "\\" + x.groups(0)[0]
+    naive_quoted = re.sub(pattern, replacer, s)
     return italicise(italics_char, naive_quoted)
 
 
 class Section:
-    def __init__(self, line):
+    def __init__(self, line: str) -> None:
         self.line = line
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = latex_quote(self.line, None)
-        c = __class__.__name__
+        c = self.__class__.__name__
         return f"{c}: {s}\n"
 
 
 class Heading(Section):
-    def __init__(self, line):
+    def __init__(self, line: str):
         level = len(line.split(" ", 2)[0])
         self.line = line[level:].lstrip(" ")
         self.level = level
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         level = "sub" * (self.level - 1)
         cmd = f"\x5c{level}section*"
         s = latex_quote(self.line, None)
@@ -72,21 +74,21 @@ class Heading(Section):
 
 
 class Preformatted(Section):
-    def __init__(self, _line):
-        self.line = []
+    def __init__(self, _line: str):
+        self.lines: List[str] = []
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         top = "\\begin{verbatim}\n"
         tail = "\n\\end{verbatim}\n"
         lines = "\n".join(self.line)
         return f"{top}{lines}{tail}"
 
-    def append(self, line):
-        self.line.append(line)
+    def append(self, line: str) -> None:
+        self.lines.append(line)
 
 
 class Link(Section):
-    def __init__(self, line, base_url):
+    def __init__(self, line: str, base_url: str):
         relevant = line[3:]
         parts = relevant.split(" ", 1)
         self.caption = None
@@ -94,22 +96,26 @@ class Link(Section):
             self.caption = parts[1]
         self.referent = gemini_url.gemini_urljoin(base_url, parts[0])
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         if self.caption is not None:
             return "\\href{%s}{%s}" % (self.referent, self.caption)
         return "\\url{%s}" % self.referent
 
 
+class Container(Section):
+    pass
+
+
 # yes, I am well aware this should be factored together with
-# the List class below.  I don't care
-class Links(Section):
-    def __init__(self, i):
+# the BulletList class below.  I don't care
+class Links(Container):
+    def __init__(self, i: Link):
         self.items = [i]
 
-    def append(self, i):
+    def append(self, i: Link) -> None:
         self.items.append(i)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         top = "\\begin{itemize}\n"
         tail = "\n\\end{itemize}\n"
         items = "\n".join([ "\\item " + i.__repr__() for i in self.items ])
@@ -118,32 +124,32 @@ class Links(Section):
 
 
 class Item(Section):
-    def __init__(self, line, italics_char):
+    def __init__(self, line: str, italics_char: str):
         self.line = line[2:]
         self.italics_char = italics_char
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return latex_quote(self.line, self.italics_char)
 
 
 class Paragraph(Section):
-    def __init__(self, line, italics_char):
+    def __init__(self, line: str, italics_char: str):
         self.line = line
         self.italics_char = italics_char
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         s = latex_quote(self.line, self.italics_char)
         return f"{s}\n"
 
 
-class List(Section):
-    def __init__(self, i):
+class BulletList(Container):
+    def __init__(self, i: Item):
         self.items = [i]
 
-    def append(self, i):
+    def append(self, i: Item) -> None:
         self.items.append(i)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         top = "\\begin{itemize}\n"
         tail = "\n\\end{itemize}\n"
         items = "\n".join([ "\\item " + i.__repr__() for i in self.items ])
@@ -151,12 +157,16 @@ class List(Section):
         return f"{top}{items}{tail}"
 
 
-def sections(args, input_stream):
+SectionStream = Generator[Section, None, None]
+
+
+def sections(args: argparse.Namespace,
+             input_stream: TextIO) -> SectionStream:
     """Get the various sections of the text:
        links, paragraphs, headings, preformatted.
     """
 
-    def fragments():
+    def fragments() -> SectionStream:
         preformatted = None
 
         for line in input_stream.readlines():
@@ -189,7 +199,12 @@ def sections(args, input_stream):
             else:
                 yield Paragraph(line, args.italics_char)
 
-    def group_fragments(source, member_class, group_class):
+    # We can't type some of the arguments for this, so use Any
+    def group_fragments(
+            source: Callable[[], SectionStream],
+            member_class: Any,
+            group_class: Any
+    ) -> SectionStream:
         current = None
         for frag in source():
             if current is None:
@@ -212,11 +227,11 @@ def sections(args, input_stream):
 
     # could be more elegant, but at least it deduplicates somewhat what had
     # gone before
-    def fragments_with_item_lists():
-        for frag in group_fragments(fragments, Item, List):
+    def fragments_with_item_lists() -> SectionStream:
+        for frag in group_fragments(fragments, Item, BulletList):
             yield frag
 
-    def fragments_with_all_lists():
+    def fragments_with_all_lists() -> SectionStream:
         for frag in group_fragments(fragments_with_item_lists, Link, Links):
             yield frag
 
@@ -224,14 +239,14 @@ def sections(args, input_stream):
         yield frag
 
 
-def main(args, input_stream):
+def main(args: argparse.Namespace, input_stream: TextIO) -> None:
     print("\\documentclass{%s}" % args.docclass)
     print(f"{args.top}")
     for sect in sections(args, input_stream):
         print(f"{sect}")
     print(f"{args.tail}")
 
-def run():
+def run() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--debug',

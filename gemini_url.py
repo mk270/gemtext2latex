@@ -21,9 +21,9 @@
 import urllib.parse
 import urllib3
 import unittest
+from typing import Optional
 
-
-def gemini_urljoin(base, url):
+def gemini_urljoin(base: Optional[str], url: str) -> str:
     """
     Return a new URL, which would be obtained if `url` were interpreted
     relative to `base`, e.g., where a browser were viewing the page at `base`
@@ -47,30 +47,30 @@ def gemini_urljoin(base, url):
     result = urllib.parse.urljoin(tmp, url)
     return unhttpise_url(result)
 
-def same_host(url):
+def same_host(url: str) -> bool:
     u = urllib3.util.parse_url(url)
     return u.host is None
 
-def get_scheme(url):
+def get_scheme(url: str) -> Optional[str]:
     return urllib3.util.parse_url(url).scheme
 
-def has_scheme(url):
+def has_scheme(url: str) -> bool:
     return get_scheme(url) is not None
 
-def change_scheme(url, scheme):
+def change_scheme(url: str, scheme: str) -> str:
     parts = list(urllib.parse.urlsplit(url))
     parts[0] = scheme
     return urllib.parse.urlunsplit(tuple(parts))
 
-def httpise_url(url):
+def httpise_url(url: str) -> str:
     return change_scheme(url, "http")
 
-def unhttpise_url(url):
+def unhttpise_url(url: str) -> str:
     return change_scheme(url, "gemini")
 
 
 class TestUrlHacks(unittest.TestCase):
-    def test_urljoin(self):
+    def test_urljoin(self) -> None:
         data = [
             ("gemini://host.domain.tld/dir1/file2",
              "file3",
