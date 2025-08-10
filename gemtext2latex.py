@@ -36,7 +36,7 @@ def italicise(delim: Optional[str], line: str) -> str:
         return line
 
     quote = {
-        "*": "\*",
+        "*": "\\*",
     }
     quoted_delim = quote.get(delim, delim)
     pattern = re.compile(quoted_delim + "([a-zA-Z0-9, '-]*?)" + quoted_delim)
