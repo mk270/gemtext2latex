@@ -142,6 +142,18 @@ class Paragraph(Section):
         return f"{s}\n"
 
 
+class Quotation(Section):
+    def __init__(self, line: str, italics_char: str):
+        self.line = line
+        self.italics_char = italics_char
+
+    def __repr__(self) -> str:
+        s = latex_quote(self.line, self.italics_char)
+        top = "\\begin{quotation}\n``"
+        tail = "''\n\\end{quotation}\n"
+        return f"{top}{s}{tail}\n"
+
+
 class BulletList(Container):
     def __init__(self, i: Item):
         self.items = [i]
@@ -195,6 +207,9 @@ def sections(args: argparse.Namespace,
 
             elif line.startswith("* "):
                 yield Item(line, args.italics_char)
+
+            elif line.startswith("> "):
+                yield Quotation(line[2:], args.italics_char)
 
             else:
                 yield Paragraph(line, args.italics_char)
