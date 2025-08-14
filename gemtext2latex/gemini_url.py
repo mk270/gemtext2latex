@@ -1,4 +1,3 @@
-
 # gemtext2latex, A Gemini to LaTeX text converter, by Martin Keegan
 #
 # To the extent (if any) permissible by law, Copyright (C) 2022  Martin Keegan
@@ -18,13 +17,16 @@
 #
 # Specifically, it seemed that urllib.parse.urljoin didn't like gemini:// URLs.
 
-import urllib.parse
-import urllib3
 import unittest
-from typing import Optional
+import urllib.parse
 
-def gemini_urljoin(base: Optional[str], url: str) -> str:
-    """
+import urllib3
+import urllib3.util
+
+
+def gemini_urljoin(base: str | None, url: str) -> str:
+    """Join two URLS.
+
     Return a new URL, which would be obtained if `url` were interpreted
     relative to `base`, e.g., where a browser were viewing the page at `base`
     and clicked on a link to `url`.
@@ -38,7 +40,7 @@ def gemini_urljoin(base: Optional[str], url: str) -> str:
     """
     if base is None:
         return url
-    
+
     assert get_scheme(base) in [None, "gemini"]
     if get_scheme(url) not in [None, "gemini"]:
         return url
@@ -47,23 +49,29 @@ def gemini_urljoin(base: Optional[str], url: str) -> str:
     result = urllib.parse.urljoin(tmp, url)
     return unhttpise_url(result)
 
+
 def same_host(url: str) -> bool:
     u = urllib3.util.parse_url(url)
     return u.host is None
 
-def get_scheme(url: str) -> Optional[str]:
+
+def get_scheme(url: str) -> str | None:
     return urllib3.util.parse_url(url).scheme
+
 
 def has_scheme(url: str) -> bool:
     return get_scheme(url) is not None
+
 
 def change_scheme(url: str, scheme: str) -> str:
     parts = list(urllib.parse.urlsplit(url))
     parts[0] = scheme
     return urllib.parse.urlunsplit(tuple(parts))
 
+
 def httpise_url(url: str) -> str:
     return change_scheme(url, "http")
+
 
 def unhttpise_url(url: str) -> str:
     return change_scheme(url, "gemini")
@@ -72,22 +80,15 @@ def unhttpise_url(url: str) -> str:
 class TestUrlHacks(unittest.TestCase):
     def test_urljoin(self) -> None:
         data = [
-            ("gemini://host.domain.tld/dir1/file2",
-             "file3",
-             "gemini://host.domain.tld/dir1/file3"),
-
-            (None,
-             "example.gmi",
-             "example.gmi"),
-
-            ("gemini://a.com/b/c.txt",
-             "../d.txt",
-             "gemini://a.com/d.txt"),
-
-            ("gemini://a.com/b",
-             "gemini://b.com/c",
-             "gemini://b.com/c")
-            ]
+            (
+                "gemini://host.domain.tld/dir1/file2",
+                "file3",
+                "gemini://host.domain.tld/dir1/file3",
+            ),
+            (None, "example.gmi", "example.gmi"),
+            ("gemini://a.com/b/c.txt", "../d.txt", "gemini://a.com/d.txt"),
+            ("gemini://a.com/b", "gemini://b.com/c", "gemini://b.com/c"),
+        ]
 
         for datum in data:
             base, url, expected_result = datum

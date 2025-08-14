@@ -1,32 +1,42 @@
-#!/usr/bin/env python3
+"""gemtext2latex, A Gemini to LaTeX text converter, by Martin Keegan.
 
-# gemtext2latex, A Gemini to LaTeX text converter, by Martin Keegan
-#
-# To the extent (if any) permissible by law, Copyright (C) 2022  Martin Keegan
-#
-# This programme is free software; you may redistribute and/or modify it under
-# the terms of the Apache Software Licence v2.0.
+To the extent (if any) permissible by law, Copyright (C) 2022  Martin Keegan
+This programme is free software; you may redistribute and/or modify it under
+the terms of the Apache Software Licence v2.0.
 
-import logging
+"""
+
 import argparse
-import sys
+import importlib.metadata
+import logging
+import os
 import re
-import gemini_url
-from typing import (Optional, Generator, Callable, TypeVar, Type, TextIO,
-                    List, Any)
+import sys
+import warnings
+from collections.abc import Callable, Generator
+from typing import Any, TextIO
 
-DOC_CLASS='mk-plain'
+import importlib_resources
 
-DOC_TOP = '''
+from . import gemini_url
+from .warnings_util import die, simple_warning
+
+
+VERSION = importlib.metadata.version("gemtext2latex")
+
+DOC_CLASS = "mk-plain"
+
+DOC_TOP = """
 \\begin{document}
-'''
+"""
 
-DOC_TAIL = '''
+DOC_TAIL = """
 \\end{document}
-'''
+"""
+
 
 # TODO deal with underscores being naively quoted
-def italicise(delim: Optional[str], line: str) -> str:
+def italicise(delim: str | None, line: str) -> str:
     if delim is None:
         return line
 
@@ -43,9 +53,13 @@ def italicise(delim: Optional[str], line: str) -> str:
     result = re.sub(pattern, "\\\\textit\x7b\\1\x7d", line)
     return result
 
-def latex_quote(s: str, italics_char: Optional[str]) -> str:
-    pattern = r'([%$}{_#&])' # characters that latex wants to quote
-    replacer = lambda x: "\\" + x.groups(0)[0]
+
+def latex_quote(s: str, italics_char: str | None) -> str:
+    pattern = r"([%$}{_#&])"  # characters that latex wants to quote
+
+    def replacer(x):
+        return "\\" + x.groups(0)[0]
+
     naive_quoted = re.sub(pattern, replacer, s)
     return italicise(italics_char, naive_quoted)
 
@@ -75,7 +89,7 @@ class Heading(Section):
 
 class Preformatted(Section):
     def __init__(self, _line: str):
-        self.lines: List[str] = []
+        self.lines: list[str] = []
 
     def __repr__(self) -> str:
         top = "\\begin{verbatim}\n"
@@ -98,8 +112,8 @@ class Link(Section):
 
     def __repr__(self) -> str:
         if self.caption is not None:
-            return "\\href{%s}{%s}" % (self.referent, self.caption)
-        return "\\url{%s}" % self.referent
+            return f"\\href{self.referent}{self.caption}"
+        return f"\\url{self.referent}"
 
 
 class Container(Section):
@@ -118,7 +132,7 @@ class Links(Container):
     def __repr__(self) -> str:
         top = "\\begin{itemize}\n"
         tail = "\n\\end{itemize}\n"
-        items = "\n".join([ "\\item " + i.__repr__() for i in self.items ])
+        items = "\n".join(["\\item " + i.__repr__() for i in self.items])
 
         return f"{top}{items}{tail}"
 
@@ -164,7 +178,7 @@ class BulletList(Container):
     def __repr__(self) -> str:
         top = "\\begin{itemize}\n"
         tail = "\n\\end{itemize}\n"
-        items = "\n".join([ "\\item " + i.__repr__() for i in self.items ])
+        items = "\n".join(["\\item " + i.__repr__() for i in self.items])
 
         return f"{top}{items}{tail}"
 
@@ -172,10 +186,10 @@ class BulletList(Container):
 SectionStream = Generator[Section, None, None]
 
 
-def sections(args: argparse.Namespace,
-             input_stream: TextIO) -> SectionStream:
-    """Get the various sections of the text:
-       links, paragraphs, headings, preformatted.
+def sections(args: argparse.Namespace, input_stream: TextIO) -> SectionStream:
+    """Get the various sections of the text.
+
+    The sections are: links, paragraphs, headings, preformatted.
     """
 
     def fragments() -> SectionStream:
@@ -216,9 +230,7 @@ def sections(args: argparse.Namespace,
 
     # We can't type some of the arguments for this, so use Any
     def group_fragments(
-            source: Callable[[], SectionStream],
-            member_class: Any,
-            group_class: Any
+        source: Callable[[], SectionStream], member_class: Any, group_class: Any
     ) -> SectionStream:
         current = None
         for frag in source():
@@ -243,77 +255,91 @@ def sections(args: argparse.Namespace,
     # could be more elegant, but at least it deduplicates somewhat what had
     # gone before
     def fragments_with_item_lists() -> SectionStream:
-        for frag in group_fragments(fragments, Item, BulletList):
-            yield frag
+        yield from group_fragments(fragments, Item, BulletList)
 
     def fragments_with_all_lists() -> SectionStream:
-        for frag in group_fragments(fragments_with_item_lists, Link, Links):
-            yield frag
+        yield from group_fragments(fragments_with_item_lists, Link, Links)
 
-    for frag in fragments_with_all_lists():
-        yield frag
+    yield from fragments_with_all_lists()
 
 
-def main(args: argparse.Namespace, input_stream: TextIO) -> None:
-    print("\\documentclass{%s}" % args.docclass)
+def print_latex(args: argparse.Namespace, input_stream: TextIO) -> None:
+    print("\\documentclass{args.docclass}")
     print(f"{args.top}")
     for sect in sections(args, input_stream):
         print(f"{sect}")
     print(f"{args.tail}")
 
-def run() -> None:
-    parser = argparse.ArgumentParser()
+
+def main(argv: list[str] = sys.argv[1:]) -> None:
+    # Command-line arguments
+    parser = argparse.ArgumentParser(
+        description="Convert Gemini text to LaTeX",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument(
-        '--debug',
-        action='store_true',
+        "-V",
+        "--version",
+        action="version",
+        version=f"""%(prog)s {VERSION}
+© 2025 Martin Keegan <mk270@no.ucant.org>
+https://github.com/mk270/gemtext2latex
+This programme is free software; you may redistribute and/or modify it under
+the terms of the Apache Software Licence v2.0.""",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
         required=False,
-        help='set logging level to INFO (etc)'
+        help="set logging level to INFO (etc)",
     )
     parser.add_argument(
-        '--top',
+        "--top",
         default=DOC_TOP,
-        help=("set the preamble before the content. " +
-              "Must include the \\begin{document} line.")
+        help=(
+            "set the preamble before the content. "
+            + "Must include the \\begin{document} line."
+        ),
     )
     parser.add_argument(
-        '--italics-char',
-        default=None,
-        type=str,
-        help=("set the delimiter for italics")
+        "--italics-char", default=None, type=str, help=("set the delimiter for italics")
     )
     parser.add_argument(
-        '--tail',
+        "--tail",
         default=DOC_TAIL,
-        help=("set the endmatter after the content. " +
-              "Must include the \\end{document} line.")
+        help=(
+            "set the endmatter after the content. "
+            + "Must include the \\end{document} line."
+        ),
     )
+    parser.add_argument("--docclass", default=DOC_CLASS, help="set document class")
     parser.add_argument(
-        '--docclass',
-        default=DOC_CLASS,
-        help="set document class"
+        "--filename", type=argparse.FileType("r"), default="-", help="input file"
     )
-    parser.add_argument(
-        '--filename',
-        default=None,
-        help="input file"
-    )
-    parser.add_argument(
-        '--base',
-        default=None,
-        help=" base for use with relative URLs"
-    )
-    args = parser.parse_args()
+    parser.add_argument("--base", default=None, help=" base for use with relative URLs")
+    parser.add_argument("--texinputs", action="store_true")
+    warnings.showwarning = simple_warning(parser.prog)
+    args = parser.parse_args(argv)
+
+    # Run command
     if args.debug:
         logging.getLogger().setLevel(20)
 
     if args.italics_char is not None:
         assert len(args.italics_char) == 1
-
-    if args.filename:
-        with open(args.filename) as f:
-            main(args, f)
+    if args.texinputs:
+        latex_class_path = importlib_resources.files()
+        print(f"TEXINPUTS={latex_class_path}")
     else:
-        main(args, sys.stdin)
-
-if __name__ == '__main__':
-    run()
+        try:
+            if "func" in args:
+                args.func(args)
+            else:
+                print(args.filename)
+                print_latex(args, args.filename)
+        except Exception as err:
+            if "DEBUG" in os.environ:
+                logging.error(err, exc_info=True)
+            else:
+                die(f"{err}")
+            sys.exit(1)

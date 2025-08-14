@@ -1,0 +1,52 @@
+[project]
+name = "gemtext2latex"
+version = "0.1"
+description = "Convert Gemini text to LaTeX"
+license = "Apache-2.0"
+authors = [
+    {name = "Martin Keegan", email = "mk270@no.ucant.org"}
+]
+readme = "README.md"
+urls = {Homepage = "https://github.com/mk270/gemtext2latex"}
+requires-python = ">= 3.10"
+dependencies = [
+    "importlib_resources >= 5.10",
+    "urllib3",
+]
+classifiers = [
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+]
+
+[project.scripts]
+gemtext2latex = "gemtext2latex:main"
+
+[build-system]
+requires = [
+    "setuptools >= 62.3.0",
+]
+
+[tool.setuptools]
+packages = [
+    "gemtext2latex",
+]
+
+[tool.ruff.lint]
+select = ["D", "E", "F", "I", "UP"]
+ignore = ["D1", "D401", "D415", "E501"]
+
+[tool.ruff.lint.isort]
+lines-after-imports = 2
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.tox]
+env_list = ["3.10", "3.11", "3.12", "3.13"]
+
+[tool.tox.env_run_base]
+deps = ["pyright", "ruff", "types-setuptools"]
+commands = [
+    ["pyright", "gemtext2latex"],
+    ["ruff", "check", "gemtext2latex"],
+]
