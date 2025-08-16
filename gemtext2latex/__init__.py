@@ -335,7 +335,6 @@ the terms of the Apache Software Licence v2.0.""",
             if "func" in args:
                 args.func(args)
             else:
-                print(args.filename)
                 print_latex(args, args.filename)
         except Exception as err:
             if "DEBUG" in os.environ:
