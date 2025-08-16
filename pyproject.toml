@@ -8,9 +8,8 @@ authors = [
 ]
 readme = "README.md"
 urls = {Homepage = "https://github.com/mk270/gemtext2latex"}
-requires-python = ">= 3.10"
+requires-python = ">= 3.12"
 dependencies = [
-    "importlib_resources >= 5.10",
     "urllib3",
 ]
 classifiers = [
@@ -42,7 +41,7 @@ lines-after-imports = 2
 convention = "google"
 
 [tool.tox]
-env_list = ["3.10", "3.11", "3.12", "3.13"]
+env_list = ["3.12", "3.13"]
 
 [tool.tox.env_run_base]
 deps = ["pyright", "ruff", "types-setuptools"]

@@ -8,6 +8,7 @@ the terms of the Apache Software Licence v2.0.
 
 import argparse
 import importlib.metadata
+import importlib.resources
 import logging
 import os
 import re
@@ -15,8 +16,6 @@ import sys
 import warnings
 from collections.abc import Callable, Generator
 from typing import Any, TextIO
-
-import importlib_resources
 
 from . import gemini_url
 from .warnings_util import die, simple_warning
@@ -328,7 +327,7 @@ the terms of the Apache Software Licence v2.0.""",
     if args.italics_char is not None:
         assert len(args.italics_char) == 1
     if args.texinputs:
-        latex_class_path = importlib_resources.files()
+        latex_class_path = importlib.resources.files()
         print(f"TEXINPUTS={latex_class_path}")
     else:
         try:
