@@ -11,6 +11,15 @@ Usage once the interface has re-stabilised
     $ gemtext2latex < example.gemini > example.tex
     $ pdflatex example.tex
 
+Installers
+----------
+
+It is intended that one should be able to install this via Python's normal packaging tools, e.g.,
+
+    $ pipx install gemtext2latex
+
+Alternatively, binary installers are going to be generated on Github. These probably install all of Python, so are a bit of overkill.
+
 To do
 -----
 
