@@ -49,3 +49,12 @@ commands = [
     ["pyright", "gemtext2latex"],
     ["ruff", "check", "gemtext2latex"],
 ]
+
+[[tool.cxfreeze.executables]]
+script = "gemtext2latex/__main__.py"
+icon = "app-icon"
+shortcut_name = "gemtext2latex"
+shortcut_dir = "DesktopFolder"
+
+[tool.cxfreeze.build_exe]
+include_msvcr = true

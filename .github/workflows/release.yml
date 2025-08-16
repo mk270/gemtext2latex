@@ -1,0 +1,93 @@
+name: Build release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  source-release:
+    name: Make source release
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Python dependencies
+        run: pip install tox build
+      - name: Build
+        run: make dist
+      - name: Make the release
+        run: gh release create ${{ github.ref_name }} --title "Release ${{ github.ref_name}}" dist/*
+
+  binary-release:
+    name: Make binary release
+    needs: source-release
+    strategy:
+      matrix:
+        # Use oldest available macOS and Ubuntu for greatest compatibility
+        # of resulting binary.
+        os: [ubuntu-22.04, macos-13, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Python (Windows, macOS)
+        uses: actions/setup-python@v5
+        if: ${{ matrix.os != 'ubuntu-22.04' }}
+        with:
+          python-version: "3.12"
+      - name: Install deadsnakes PPA (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        uses: deadsnakes/action@v3.2.0
+        with:
+          python-version: "3.12"
+      - name: Install Python dependencies
+        run: pip install tox build setuptools urllib3
+      - name: Build
+        run: make dist
+      - name: Build the executable (Ubuntu)
+        if: ${{ matrix.os == 'ubuntu-22.04' }}
+        run: |
+          pip install pyinstaller
+          PYTHONPATH=. pyinstaller --noconfirm --onefile --windowed --name gemtext2latex-${{ runner.os }}-${{ runner.arch }} --copy-metadata gemtext2latex gemtext2latex/__main__.py
+          ./dist/gemtext2latex-${{ runner.os }}-${{ runner.arch }} --help
+      - name: Build the executable (macOS)
+        if: ${{ matrix.os == 'macos-13' || matrix.os == 'macos-latest' }}
+        run: |
+          pip install pyinstaller
+          ./make-macos-icns app-icon.png gemtext2latex.iconset
+          pyi-makespec --windowed --name gemtext2latex --icon gemtext2latex.icns --copy-metadata gemtext2latex gemtext2latex/__main__.py
+          export version=$(grep version pyproject.toml)
+          sed -i '' -e "s/\(name='gemtext2latex.app'\)/\1,\n    $version/" gemtext2latex.spec
+          PYTHONPATH=. pyinstaller --noconfirm gemtext2latex.spec
+          brew install create-dmg
+          mkdir dmg-folder
+          mv dist/gemtext2latex.app dmg-folder/
+          create-dmg --volname "gemtext2latex ${{ github.ref_name }}" ./dist/gemtext2latex-${{ runner.os }}-${{ runner.arch }}.dmg dmg-folder/
+      - name: Build the executable (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          pip install cx_Freeze Pillow
+          python convert-image app-icon.png app-icon.ico
+          cxfreeze bdist_msi
+          mv dist/*.msi dist/gemtext2latex-win64.msi
+      - name: Upload the binary (Ubuntu and macOS)
+        if: ${{ matrix.os != 'windows-latest' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ github.token }}
+          tag: ${{ github.ref }}
+          file: ./dist/gemtext2latex-${{ runner.os }}-${{ runner.arch }}*
+          file_glob: true
+      - name: Upload the binary (Windows)
+        if: ${{ matrix.os == 'windows-latest' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ github.token }}
+          tag: ${{ github.ref }}
+          file: ./dist/gemtext2latex*.msi
+          file_glob: true
