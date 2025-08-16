@@ -1,6 +1,6 @@
 """Warning and error routines.
 
-© Reuben Thomas <rrt@sc3d.org> 2023.
+(c) Reuben Thomas <rrt@sc3d.org> 2023.
 
 Released under the Apache Software Licence, v2.0.
 """

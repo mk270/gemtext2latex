@@ -4,7 +4,7 @@ version = "0.1"
 description = "Convert Gemini text to LaTeX"
 license = "Apache-2.0"
 authors = [
-    {name = "Martin Keegan", email = "mk270@no.ucant.org"}
+    {name = "Martin Keegan", email = "martin@no.ucant.org"}
 ]
 readme = "README.md"
 urls = {Homepage = "https://github.com/mk270/gemtext2latex"}

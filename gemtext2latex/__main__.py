@@ -1,6 +1,6 @@
 """gemtext2latex: Launcher.
 
-© Martin Keegan <mk270@no.ucant.org> 2025.
+(c) Martin Keegan <martin@no.ucant.org> 2025.
 
 Released under the Apache Software Licence, v2.0.
 """

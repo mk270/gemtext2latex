@@ -282,7 +282,7 @@ def main(argv: list[str] = sys.argv[1:]) -> None:
         "--version",
         action="version",
         version=f"""%(prog)s {VERSION}
-© 2025 Martin Keegan <mk270@no.ucant.org>
+(c) 2025 Martin Keegan <martin@no.ucant.org>
 https://github.com/mk270/gemtext2latex
 This programme is free software; you may redistribute and/or modify it under
 the terms of the Apache Software Licence v2.0.""",
