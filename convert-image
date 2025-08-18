@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+#
+# © Reuben Thomas <rrt@sc3d.org> 2025
+# Released under the GPL version 3, or (at your option) any later version.
+
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["Pillow"]
+# ///
+
+import argparse
+
+from PIL import Image
+
+
+# Command-line arguments
+parser = argparse.ArgumentParser(
+    description="Convert image format.",
+)
+parser.add_argument(
+    "-V",
+    "--version",
+    action="version",
+    version="%(prog)s 0.1 by Reuben Thomas <rrt@sc3d.org>",
+)
+parser.add_argument(
+    "input_image", metavar="FILE", help="input image"
+)
+parser.add_argument(
+    "output_image", metavar="FILE", help="output image"
+)
+args = parser.parse_args()
+
+# Convert the image
+im = Image.open(args.input_image)
+im.save(args.output_image)
