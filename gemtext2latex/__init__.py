@@ -14,7 +14,7 @@ import re
 import sys
 import warnings
 from collections.abc import Callable, Generator
-from typing import Any, TextIO
+from typing import Any, TextIO, Match
 
 import importlib_resources
 
