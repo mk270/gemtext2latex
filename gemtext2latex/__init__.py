@@ -94,7 +94,7 @@ class Preformatted(Section):
     def __repr__(self) -> str:
         top = "\\begin{verbatim}\n"
         tail = "\n\\end{verbatim}\n"
-        lines = "\n".join(self.line)
+        lines = "\n".join(self.lines)
         return f"{top}{lines}{tail}"
 
     def append(self, line: str) -> None:
@@ -112,8 +112,8 @@ class Link(Section):
 
     def __repr__(self) -> str:
         if self.caption is not None:
-            return f"\\href{self.referent}{self.caption}"
-        return f"\\url{self.referent}"
+            return f"\\href{{{self.referent}}}{{{self.caption}}}"
+        return f"\\url{{{self.referent}}}"
 
 
 class Container(Section):
@@ -264,7 +264,7 @@ def sections(args: argparse.Namespace, input_stream: TextIO) -> SectionStream:
 
 
 def print_latex(args: argparse.Namespace, input_stream: TextIO) -> None:
-    print("\\documentclass{args.docclass}")
+    print(f"\\documentclass{{{args.docclass}}}")
     print(f"{args.top}")
     for sect in sections(args, input_stream):
         print(f"{sect}")

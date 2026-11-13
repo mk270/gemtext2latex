@@ -31,6 +31,9 @@ packages = [
     "gemtext2latex",
 ]
 
+[tool.setuptools.package-data]
+gemtext2latex = ["*.cls"]
+
 [tool.ruff.lint]
 select = ["D", "E", "F", "I", "UP"]
 ignore = ["D1", "D401", "D415", "E501"]
